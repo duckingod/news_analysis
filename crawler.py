@@ -6,7 +6,7 @@ import sys
 import os.path
 import Queue
 import traceback
-import data_manage
+from model import data_manage
 
 
 class SiteLoader:
