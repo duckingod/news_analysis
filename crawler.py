@@ -6,6 +6,7 @@ import sys
 import os.path
 import Queue
 import traceback
+import data_manage
 
 
 class SiteLoader:
@@ -44,18 +45,18 @@ class Crawler:
                 except:
                     continue
                 try:
-                    print 'task '+str(self.ID)+' : url get : ' + info['ID']
+                    print 'task '+str(self.ID)+' : url get : ' + info.article_ID
                     request = urllib.urlopen(url)
                     html = request.read()
                     content = self.loader.fetch_article_content(html)
                     self.result.put((info, content))
-                    print 'task '+str(self.ID)+' : result put : ' + info['ID']
+                    print 'task '+str(self.ID)+' : result put : ' + info.article_ID
                 except Exception as ea:
                     traceback.print_exc()
                     print ea
                 finally:
                     self.urls.task_done()
-                    print 'task '+str(self.ID)+' : done : ' + info['ID']
+                    print 'task '+str(self.ID)+' : done : ' + info.article_ID
         def stop(self):
             self._stop = True
 
@@ -102,32 +103,11 @@ class Crawler:
         self.__stop_threads()
         return self.results
 
-class ArticleManager:
-    DATA_PATH = u'data/article'
-    DATA_NAME = u'{date}-{time}-{loader_ID}-{article_ID}-{title}.txt'
-    def update(self, loader, result):
-        from news_site import utils
-        loader_ID = loader.ID()
-        while not result.empty():
-            info, content = result.get()
-            file_name = os.path.join(
-                    self.DATA_PATH,
-                    utils.filenamelize(self.DATA_NAME.format(
-                        loader_ID=loader_ID,
-                        article_ID=info['ID'],
-                        title=info['title'],
-                        date=info['date'],
-                        time=info['time']))
-            )
-            with open(file_name, 'w') as f:
-                f.write(content.encode('utf-8'))
-                print 'saved: ' + file_name[:25] + ' ...'
-
-
 if __name__=="__main__":
     from news_site.appledaily import AppleDailyLoader
+
     loader = AppleDailyLoader()
     crawler = Crawler(loader)
     result = crawler.run()
-    ArticleManager().update(loader, result)
+    data_manage.ArticleManager().update(loader, result)
     

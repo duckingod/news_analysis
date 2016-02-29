@@ -15,15 +15,18 @@ class AppleDailyLoader(SiteLoader):
         self.next_index_page = 0
         self.grep_urls = []
         self.next_url_idx = 0
+        self.cnt = 0 # debug
 
     def __get_urls(self, idx):
-        def get_article_infos(div):
-            def to_date(s): # '2016 / 02 / 16' -> '20160216'
-                return s[0:4]+s[7:9]+s[12:14]
+        def get_article_url_infos(div):
+            def to_date(date_s, time_s): 
+                import datetime
+                return datetime.datetime.strptime(date_s+"-"+time_s[:2]+time_s[-2:], '%Y / %m / %d-%H%M')
             def to_time(s):
                 return s[:2]+s[-2:]
             def to_id(s):
                 return "0000"+s
+            from data_manage import ArticleInfo
             infos = []
             urls = []
             for idx, e in enumerate(div):
@@ -36,25 +39,24 @@ class AppleDailyLoader(SiteLoader):
                         art_id = url[url.rfind('/')+1:]
                         title = tmpu[self.URL_TITLE_IDX+1:]
                         time = article.xpath("a//time")[0].text
-                        infos.append(
-                            {'ID':to_id(art_id),
-                             'title':title,
-                             'date':to_date(date),
-                             'time':to_time(time)} )
+                        infos.append(ArticleInfo(
+                            article_ID=to_id(art_id),
+                            title=title,
+                            date=to_date(date, time)) )
                         urls.append( self.HOST + url )
-            return (infos, urls)
+            return zip(infos, urls)
         index_url = AppleDailyLoader.SITE.format(idx)
         request = urllib.urlopen(index_url)
         html = request.read()
         tree = etree.HTML(html.lower().decode('utf-8'))
         list_div = tree.xpath(
                 "//article[@id='maincontent']/div[@class='thoracis']/div")[1]
-        info, url = get_article_infos(list_div)
-        self.grep_urls = []
-        for article_info in zip(info, url):
-            self.grep_urls.append( article_info )
+        self.grep_urls = get_article_url_infos(list_div)
 
     def next_url(self):
+        if self.cnt>5:
+            return None
+        self.cnt += 1
         if self.next_url_idx >= len(self.grep_urls):
             self.__get_urls(self.next_index_page)
             self.next_index_page += 1
@@ -73,5 +75,5 @@ class AppleDailyLoader(SiteLoader):
                   find_idx(e, lambda n:n.get('id')=='teadstv'))
         for n in e[idx:]:
             e.remove(n)
-        return get_all_text(e)
+        return get_all_text(e).strip()
 
