@@ -1,0 +1,4 @@
+echo .gitignore_emptyfolder
+cp .gitignore_emptyfolder $1/.gitignore
+git add $1/.gitignore
+
