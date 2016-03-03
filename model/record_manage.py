@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
 
+
 class RecordManager:
     def get_vector(self, record, entry_tag):
         vec = {}
@@ -47,14 +48,16 @@ class TagManager:
             for item in sorted_sheet:
                 self.get_tag(item[0])
 
-            
-        
 
 class EntryTagManager(TagManager):
+    def __init__(self, path_getter):
+        self.path_getter = path_getter
     def tag_sheet_path(self):
-        return 'data/tag_sheet/entry'
+        return self.path_getter('entry_tag')
 
 class LabelTagManager(TagManager):
+    def __init__(self, path_getter):
+        self.path_getter = path_getter
     def tag_sheet_path(self):
-        return 'data/tag_sheet/label'
+        return self.path_getter('label_tag')
 
