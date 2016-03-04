@@ -48,6 +48,9 @@ class ArticleManager:
             return self.__datetime_to_date_s(date) + "-*.txt"
 
     nameresolver=NameResolver()
+
+    def __init__(self):
+        self.label_sheet_cache = None
     
     def __article_full_path(self, info):
         return os.path.join( self.DATA_PATH, self.nameresolver.name(info) )
@@ -90,7 +93,7 @@ class ArticleManager:
             cont = f.read().decode('utf-8')
         return (self.get_label(info), cont)
     def get_label(self, info):
-        return self.__get_label_sheet()[info.uni_id()]
+        return self.__get_label_sheet().get(info.uni_id(), [])
     def __get_label_sheet(self):
         if self.label_sheet_cache!=None:
             return self.label_sheet_cache
@@ -106,5 +109,5 @@ class ArticleManager:
         with open(self.LABEL_PATH, 'w') as f:
             f.write(str(self.label_sheet_cache).encode('utf-8'))
     def set_label(self, info, label):
-        self.__get_label_sheet()[info.uni_id] = label
+        self.__get_label_sheet()[info.uni_id()] = label
 

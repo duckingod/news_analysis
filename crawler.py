@@ -42,6 +42,7 @@ class Crawler:
             while not self._stop:
                 try:
                     info, url = self.urls.get(timeout=1)
+                    info.loader_ID = self.loader.ID()
                 except:
                     continue
                 try:

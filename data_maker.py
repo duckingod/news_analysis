@@ -2,6 +2,7 @@ from feature.extract import ThresholdLogExtractor
 from feature.generate import SimpleNGramGenerator
 from model.record_manage import EntryTagManager, LabelTagManager
 from model.common import PathGetter
+from model.data_manage import ArticleManager
 
 class DataMaker:
     def __init__(self, feature_generator, feature_extractors):
@@ -69,7 +70,8 @@ if __name__=='__main__':
     articles, vectors = generator.generate()
         
     print '===='
-    print articles[0].title
+    print articles[2].title
+    print ArticleManager().get_label(articles[2])
     print vectors[0]
 
 
