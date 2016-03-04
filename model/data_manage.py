@@ -14,8 +14,7 @@ class ArticleInfo:
 
 class ArticleManager:
     DATA_PATH = u'data/article'
-    PRE_HEADER = '===pre==='
-    END_PRE_HEADER = '===end==='
+    LABEL_PATH = u'data/label'
     class NameResolver:
         NAME = u'{date}-{time}-{loader_ID}-{article_ID}-{title}.txt'
         #             20160216-2140-0000-123456890-article_title.txt
@@ -89,11 +88,23 @@ class ArticleManager:
         path = self.__article_full_path(info)
         with open(path, 'r') as f:
             cont = f.read().decode('utf-8')
-        return (self.__get_label(cont), cont)
-    def __get_label(self, content):
-        if content[:len(self.PRE_HEADER)]==self.PRE_HEADER:
-            d = eval(content[content.find(self.PRE_HEADER) : content.find(self.END_PRE_HEADER)])
-            return d.get('label', [])
+        return (self.get_label(info), cont)
+    def get_label(self, info):
+        return self.__get_label_sheet()[info.uni_id()]
+    def __get_label_sheet(self):
+        if self.label_sheet_cache!=None:
+            return self.label_sheet_cache
+        import os.path
+        if os.path.isfile(self.LABEL_PATH):
+            with open(self.LABEL_PATH, 'r') as f:
+                s = f.read().decode('utf-8')
+                self.label_sheet_cache = eval(s)
         else:
-            return []
-    
+            self.label_sheet_cache = {}
+        return self.label_sheet_cache
+    def save_label_sheet(self):
+        with open(self.LABEL_PATH, 'w') as f:
+            f.write(str(self.label_sheet_cache).encode('utf-8'))
+    def set_label(self, info, label):
+        self.__get_label_sheet()[info.uni_id] = label
+
