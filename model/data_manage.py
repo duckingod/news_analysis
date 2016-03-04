@@ -9,9 +9,14 @@ class ArticleInfo:
         self.article_ID = article_ID
         self.date = date
         self.title = title
+    def uni_id(self):
+        return (self.loader_ID, self.article_ID)
 
 class ArticleManager:
     DATA_PATH = u'data/article'
+    LABEL_TABLE_PATH = u'data/label.dat'
+    def __init__():
+        self.label = None
     class NameResolver:
         NAME = u'{date}-{time}-{loader_ID}-{article_ID}-{title}.txt'
         #             20160216-2140-0000-123456890-article_title.txt
@@ -81,4 +86,20 @@ class ArticleManager:
         with open(path, 'r') as f:
             cont = f.read()
         return cont.decode('utf-8')
-        
+    
+    def get_label(self, info):
+        import os.path
+        table_path = self.LABEL_TABLE_PATH
+        if os.path.isfile(table_path):
+            self.label = {}
+            with open(table_path, 'w') as f:
+                f.write(str(self.label))
+            
+        if self.label==None:
+            with open(path, 'r') as f:
+                s = f.read()
+                if s=='':
+                    self.label = {}
+                else:
+                    self.label = eval(s)
+        return 
