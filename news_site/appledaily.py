@@ -26,7 +26,7 @@ class AppleDailyLoader(SiteLoader):
                 return s[:2]+s[-2:]
             def to_id(s):
                 return "0000"+s
-            from data_manage import ArticleInfo
+            from model.data_manage import ArticleInfo
             infos = []
             urls = []
             for idx, e in enumerate(div):

@@ -14,9 +14,8 @@ class ArticleInfo:
 
 class ArticleManager:
     DATA_PATH = u'data/article'
-    LABEL_TABLE_PATH = u'data/label.dat'
-    def __init__():
-        self.label = None
+    PRE_HEADER = '===pre==='
+    END_PRE_HEADER = '===end==='
     class NameResolver:
         NAME = u'{date}-{time}-{loader_ID}-{article_ID}-{title}.txt'
         #             20160216-2140-0000-123456890-article_title.txt
@@ -81,25 +80,20 @@ class ArticleManager:
                     result.append(info)
         return result 
 
+    """
+    Get label and text content of article
+    param info: article info
+    return: (label, text)
+    """
     def get_content(self, info):
         path = self.__article_full_path(info)
         with open(path, 'r') as f:
-            cont = f.read()
-        return cont.decode('utf-8')
+            cont = f.read().decode('utf-8')
+        return (self.__get_label(cont), cont)
+    def __get_label(self, content):
+        if content[:len(self.PRE_HEADER)]==self.PRE_HEADER:
+            d = eval(content[content.find(self.PRE_HEADER) : content.find(self.END_PRE_HEADER)])
+            return d.get('label', [])
+        else:
+            return []
     
-    def get_label(self, info):
-        import os.path
-        table_path = self.LABEL_TABLE_PATH
-        if os.path.isfile(table_path):
-            self.label = {}
-            with open(table_path, 'w') as f:
-                f.write(str(self.label))
-            
-        if self.label==None:
-            with open(path, 'r') as f:
-                s = f.read()
-                if s=='':
-                    self.label = {}
-                else:
-                    self.label = eval(s)
-        return 

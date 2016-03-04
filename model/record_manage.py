@@ -1,14 +1,14 @@
 from abc import ABCMeta, abstractmethod
 
 
-class RecordManager:
+class RecordManager(object):
     def get_vector(self, record, entry_tag):
         vec = {}
         for entry in record:
             vec[entry_tag.get_tag(entry[0])] = entry[1]
         return vec
 
-class TagManager:
+class TagManager(object):
     @abstractmethod
     def tag_sheet_path(self):
         pass
@@ -33,7 +33,7 @@ class TagManager:
         with open(self.tag_sheet_path(), 'w') as f:
             f.write(str(self.tag_sheet()).encode('utf-8'))
     # COULD Mutate tag sheet
-    def get_tag(self, obj):
+    def __call__(self, obj):
         if obj not in self.tag_sheet():
             self.tag_sheet()[obj] = len(self.tag_sheet())
         return self.tag_sheet()[obj]
@@ -51,12 +51,14 @@ class TagManager:
 
 class EntryTagManager(TagManager):
     def __init__(self, path_getter):
+        super(EntryTagManager, self).__init__()
         self.path_getter = path_getter
     def tag_sheet_path(self):
         return self.path_getter('entry_tag')
 
 class LabelTagManager(TagManager):
     def __init__(self, path_getter):
+        super(LabelTagManager, self).__init__()
         self.path_getter = path_getter
     def tag_sheet_path(self):
         return self.path_getter('label_tag')

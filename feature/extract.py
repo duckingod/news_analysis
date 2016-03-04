@@ -19,7 +19,7 @@ class ThresholdLogExtractor(FeatureExtractor):
         res = []
         for entry in vector:
             val = entry[1]
-            if (entry[1]<self.thresfold):
+            if (entry[1]<self.threshold):
                 continue
-            res.append((entry[0], min(1, math.log(val+1, 2)/logged_max)))
+            res.append((entry[0], min(1, math.log(val-self.threshold+2, 2)/self.logged_max)))
         return res
