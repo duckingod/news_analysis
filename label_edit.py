@@ -1,22 +1,64 @@
 from model.data_manage import ArticleManager
 import curses
 
-class LabelEditor(object):
+class ArticleViewer(object):
+    WIN_Y_START = 1
+    WIN_X_START = 2
+    WIN_WIDTH = 78
+    WIN_HEIGHT = 13
+    LABEL_HEIGHT = 2
+    def __init__(self, article_mgr, stdscr):
+        self.article_mgr = article_mgr
+        self.stdscr = stdscr
+    def clear_window(self):
+        for i in range(self.WIN_HEIGHT):
+            self.window.addstr(i, 0, ' '*self.WIN_WIDTH)
+    def show_label(self, label):
+        s = "  ".join([str(i)+":"+l for i, l in enumerate(label)])
+        self.window.addstr(0, 0, s)
+    def show_content(self, s):
+        self.window.addstr(self.LABEL_HEIGHT, 0, s)
+    def update_article(self):
+        article = self.article_list_viewer.selected_article()
+        label, cont = self.article_mgr.get_content(article)
+        self.clear_window()
+        self.show_label(label)
+        # self.show_content(cont)
+        self.show_content("aa")
+        self.window.refresh()
+    def start(self, article_list_viewer):
+        self.article_list_viewer = article_list_viewer
+        self.window = curses.newwin(self.WIN_HEIGHT, self.WIN_WIDTH+1, self.WIN_Y_START, self.WIN_X_START)
+        while self.run(self.stdscr.getch(self.article_list_viewer.height, 0)):
+            pass
+    def run(self, c):
+        if c==ord('q') or c==ord(' '):
+            return False
+        else:
+            b = self.article_list_viewer.run(c)
+            self.update_article()
+            return b 
+        return True
+
+        
+        
+    
+
+class ArticleListViewer(object):
     # >  001301 2016/02/16 21:34 Title================
     INFO_FORMAT = "{index} {year}/{month}/{day} {hour}:{minute} {title}"
     INFO_PREFIX = 4
-    INFO_WIDTH = 40
+    INFO_WIDTH = 60
     INDEX_LENGTH = 6
-    SCREEN_WIDTH = 80
-    def __init__(self, article_mgr):
-        print 'loading article info...'
+    SCREEN_WIDTH = 70
+    def __init__(self, article_mgr, article_viewer, stdscr):
         self.top = 0
         self.now = 0
         self.height = 15
         self.article_mgr = article_mgr
-        self.articles = self.article_mgr.get_articles()
-        print 'loading article done'
-
+        self.article_viewer = article_viewer
+        self.stdscr = stdscr
+        self.force_top = False
     def chk_range(self, position):
         return position<0 or position>=self.height
     def chk_all_range(self, pos):
@@ -27,6 +69,8 @@ class LabelEditor(object):
         return self.now-self.top
     def max_top(self):
         return len(self.articles)-self.height
+    def selected_article(self):
+        return self.articles[self.now]
     def show_article(self, index, position):
         if self.chk_range(position): return
         s = ''
@@ -69,15 +113,18 @@ class LabelEditor(object):
             self.cursor_move(offset=-self.height)
         elif direction=='pagedown':
             self.cursor_move(offset=self.height)
-        if self.now<self.top:
-            move = -min(self.height, self.top)
-        elif self.now>=self.top+self.height:
-            move = min(self.height, self.max_top()-self.top)
+        if self.force_top:
+            move = self.cursor_pos()
         else:
-            move = 0
+            if self.now<self.top:
+                move = -min(self.height, self.top)
+            elif self.now>=self.top+self.height:
+                move = min(self.height, self.max_top()-self.top)
+            else:
+                move = 0
         if move!=0:
             self.top += move
-            self.refresh()
+        self.refresh()
     def refresh(self):
         for i in range(self.height):
             self.clear_prefix(i)
@@ -93,33 +140,51 @@ class LabelEditor(object):
             self.top = 0
         self.refresh()
         
-
     def input_cursor_clear(self):
         self.window.addstr(self.height, 0, ' '*self.SCREEN_WIDTH)
         curses.setsyx(self.height, 0)
-        
-    def run(self):
-        self.stdscr = curses.initscr()
+    def start(self):
         self.window = curses.newwin(self.height+2, self.SCREEN_WIDTH+1)
+        self.window.addstr(0, 0, 'loading article info...')
+        self.articles = self.article_mgr.get_articles()
         self.refresh()
+        self.window.refresh()
         self.input_cursor_clear()
-        while True:
-            c = self.stdscr.getch(self.height, 0)
-            if c==ord('w'):#curses.KEY_UP:
-                self.move('up')
-            elif c==ord('s'):#curses.KEY_DOWN:
-                self.move('down')
-            elif c==ord('a'):
-                self.move('pageup')
-            elif c==ord('d'):
-                self.move('pagedown')
-            elif c==ord('q'):
-                break
-            elif c==ord(':'):
-                idx = self.stdscr.getstr()
-                self.goto(int(idx))
-            self.window.refresh()
-            self.input_cursor_clear()
+        while self.run(self.stdscr.getch(self.height, 0)):
+            pass
+    def run(self, c):
+        if c==ord('w'):#curses.KEY_UP:
+            self.move('up')
+        elif c==ord('s'):#curses.KEY_DOWN:
+            self.move('down')
+        elif c==ord('a'):
+            self.move('pageup')
+        elif c==ord('d'):
+            self.move('pagedown')
+        elif c==ord('q'):
+            return False
+        elif c==ord(':'):
+            idx = self.stdscr.getstr()
+            self.goto(int(idx))
+        elif c==ord(' '):
+            self.article_viewer.start(self)
+        self.window.refresh()
+        self.input_cursor_clear()
+        return True
+    
+
+class LabelEditor(object):
+    def __init__(self, article_mgr):
+        self.article_mgr = article_mgr
+        self.stdscr = curses.initscr()
+        self.article_viewer = ArticleViewer(self.article_mgr, self.stdscr)
+        self.article_list_viewer = ArticleListViewer(self.article_mgr, self.article_viewer, self.stdscr) 
+    def start(self):
+        self.article_list_viewer.start()
+        curses.endwin()
+
+
+
         
             
 if __name__=='__main__':
@@ -129,11 +194,9 @@ if __name__=='__main__':
     
     editor = LabelEditor(ArticleManager())
 
-    print 'press enter to continue'
-    raw_input()
 
             
-    editor.run()
+    editor.start()
         
     
 
