@@ -1,12 +1,16 @@
 from model.data_manage import ArticleManager
 import curses
 
+import locale
+locale.setlocale(locale.LC_ALL, '')
+code = locale.getpreferredencoding() 
+    
 class ArticleViewer(object):
-    WIN_Y_START = 1
-    WIN_X_START = 6
-    WIN_WIDTH = 60
-    WIN_HEIGHT = 12
-    LABEL_HEIGHT = 2
+    WIN_Y_START = 3
+    WIN_X_START = 10
+    WIN_WIDTH = 49
+    WIN_HEIGHT = 15
+    LABEL_HEIGHT = 3
     def __init__(self, article_mgr, stdscr):
         self.article_mgr = article_mgr
         self.stdscr = stdscr
@@ -15,16 +19,20 @@ class ArticleViewer(object):
             self.window.addstr(i, 0, ' '*self.WIN_WIDTH)
     def show_label(self, label):
         s = "  ".join([str(i)+":"+l for i, l in enumerate(label)])
-        self.window.addstr(0, 0, s)
+        self.window.addstr(1, 1, s)
     def show_content(self, s):
-        self.window.addstr(self.LABEL_HEIGHT, 0, s)
+        w = self.WIN_WIDTH+-10
+        for i in range(0, (len(s)+w-1)/w, w):
+            if self.LABEL_HEIGHT+i/w>=self.WIN_HEIGHT:
+                break
+            self.window.addstr(self.LABEL_HEIGHT+i/w, 1, s[i:i+w].ljust(w))
     def update_article(self):
         article = self.article_list_viewer.selected_article()
         label, cont = self.article_mgr.get_content(article)
         self.clear_window()
         self.show_label(label)
-        # self.show_content(cont)
-        self.show_content("aa")
+        self.show_content(cont.encode(code))
+        self.window.box()
         self.window.refresh()
     def start(self, article_list_viewer):
         self.article_list_viewer = article_list_viewer
@@ -50,20 +58,19 @@ class ArticleViewer(object):
         return True
 
         
-        
-    
 
 class ArticleListViewer(object):
     # >  001301 2016/02/16 21:34 Title================
     INFO_FORMAT = "{index} {year}/{month}/{day} {hour}:{minute} {title}"
     INFO_PREFIX = 4
-    INFO_WIDTH = 60
+    INFO_WIDTH = 75
     INDEX_LENGTH = 6
-    SCREEN_WIDTH = 70
+    SCREEN_WIDTH = 80
+    SCREEN_HEIGHT = 22
     def __init__(self, article_mgr, article_viewer, stdscr):
         self.top = 0
         self.now = 0
-        self.height = 15
+        self.height = self.SCREEN_HEIGHT
         self.article_mgr = article_mgr
         self.article_viewer = article_viewer
         self.stdscr = stdscr
@@ -92,7 +99,7 @@ class ArticleListViewer(object):
                     day   = str(info.date.day).rjust(2),
                     hour  = str(info.date.hour).rjust(2),
                     minute= str(info.date.minute).rjust(2),
-                    title = 'title'#info.title
+                    title = info.title.encode(code)[:self.INFO_WIDTH-2-2-2-2-4-6-6]
                     )
         s = s.ljust(self.INFO_WIDTH)
         self.window.addstr(
@@ -126,7 +133,7 @@ class ArticleListViewer(object):
             self.cursor_move(offset=0)
 
         if self.force_top:
-            move = self.cursor_pos()
+            move = self.cursor_pos()-2
         else:
             if self.now<self.top:
                 move = -min(self.height, self.top)
