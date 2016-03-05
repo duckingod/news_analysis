@@ -46,6 +46,8 @@ class ArticleManager:
             return info
         def day_wildcard(self, date):
             return self.__datetime_to_date_s(date) + "-*.txt"
+        def re_wildcard(self):
+            return u"[0-9]{8}-[0-9]{4}-.*.txt"
 
     nameresolver=NameResolver()
 
@@ -72,14 +74,22 @@ class ArticleManager:
         def daterange(st, end):
             for n in range(int( (end-st).days )):
                 yield st + timedelta(n)
+        import re
         articles = []
         result = []
-        for date in daterange(from_time, to_time):
-            day_articles = glob.glob( os.path.join(self.DATA_PATH, self.nameresolver.day_wildcard(date)) )
-            for article in day_articles:
-                info = self.nameresolver.info(article)
-                if from_time <= info.date <= to_time:
-                    result.append(info)
+
+        r = re.compile(self.nameresolver.re_wildcard())
+        for article in [f for f in os.listdir(self.DATA_PATH) if r.search(f)]:
+            info = self.nameresolver.info(article)
+            if from_time <= info.date <= to_time:
+                result.append(info)
+        # for date in daterange(from_time, to_time):
+        #      print date
+        #     day_articles = glob.glob( os.path.join(self.DATA_PATH, self.nameresolver.day_wildcard(date)) )
+        #     for article in day_articles:
+        #         info = self.nameresolver.info(article)
+        #         if from_time <= info.date <= to_time:
+        #             result.append(info)
         return result 
 
     """
