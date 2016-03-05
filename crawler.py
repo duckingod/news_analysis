@@ -30,12 +30,13 @@ class SiteLoader:
 
 class Crawler:
     class LoadArticleThread(Thread):
-        def __init__(self, ID, site_loader, url_queue, result_queue):
+        def __init__(self, ID, site_loader, url_queue, result_queue=None, article_mgr=None):
             super(Crawler.LoadArticleThread, self).__init__()
             self.ID = ID
             self.loader = site_loader
             self.urls = url_queue
             self.result = result_queue
+            self.article_mgr = article_mgr
             self.process = None
             self._stop = False
         def run(self):
@@ -43,6 +44,8 @@ class Crawler:
                 try:
                     info, url = self.urls.get(timeout=1)
                     info.loader_ID = self.loader.ID()
+                    import time
+                    time.sleep(0.3)
                 except:
                     continue
                 try:
@@ -50,8 +53,12 @@ class Crawler:
                     request = urllib.urlopen(url)
                     html = request.read()
                     content = self.loader.fetch_article_content(html)
-                    self.result.put((info, content))
-                    print 'task '+str(self.ID)+' : result put : ' + info.article_ID
+                    if self.result:
+                        self.result.put((info, content))
+                        print 'task '+str(self.ID)+' : result put : ' + info.article_ID
+                    if self.article_mgr:
+                        self.article_mgr.update(self.loader, (info, content))
+                        print 'task '+str(self.ID)+' : result saved : ' + info.article_ID
                 except Exception as ea:
                     traceback.print_exc()
                     print ea
@@ -61,21 +68,22 @@ class Crawler:
         def stop(self):
             self._stop = True
 
-    MAX_THREAD = 5
+    MAX_THREAD = 2
     def __init__(self, site_loader):
         self.threads = []
         self.urls = Queue.Queue()
         self.results = Queue.Queue()
         self.max_threads = Crawler.MAX_THREAD
         self.loader = site_loader
-    def __make_threads(self):
+    def __make_threads(self, article_mgr=None):
         for i in range(self.max_threads):
             self.threads.append(
                     Crawler.LoadArticleThread(
                         i,
                         self.loader,
                         self.urls,
-                        self.results
+                        self.results,
+                        article_mgr=article_mgr
                     )
                 )
     def __start_threads(self):
@@ -87,8 +95,8 @@ class Crawler:
     def __number_alive_threads(self):
         return sum( [1 for t in self.threads if t.isAlive()] )
 
-    def run(self):
-        self.__make_threads()
+    def run(self, article_mgr=None):
+        self.__make_threads(article_mgr)
         self.__start_threads()
         cnt = 0
         while True:
@@ -109,6 +117,6 @@ if __name__=="__main__":
 
     loader = AppleDailyLoader()
     crawler = Crawler(loader)
-    result = crawler.run()
-    data_manage.ArticleManager().update(loader, result)
+    result = crawler.run( article_mgr=data_manage.ArticleManager() )
+    # data_manage.ArticleManager().update(loader, result)
     

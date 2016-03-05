@@ -58,14 +58,21 @@ class ArticleManager:
         return os.path.join( self.DATA_PATH, self.nameresolver.name(info) )
 
     def update(self, loader, result):
-        from news_site import utils
-        loader_ID = loader.ID()
-        while not result.empty():
-            info, content = result.get()
+        def update_single(info, content):
+            from news_site import utils
             file_name = self.__article_full_path(info)
             with open(file_name, 'w') as f:
                 f.write(content.encode('utf-8'))
                 print 'saved: ' + file_name[:25] + ' ...'
+        import Queue
+        if isinstance(result, Queue.Queue):
+            while not result.empty():
+                info, content = result.get()
+                update_single(info, content)
+        elif type(result) is tuple:
+            info, content = result
+            update_single(info, content)
+
 
     def get_articles(
             self,
