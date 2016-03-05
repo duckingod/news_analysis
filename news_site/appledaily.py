@@ -11,11 +11,12 @@ class AppleDailyLoader(SiteLoader):
     URL_TITLE_IDX = 45
     def ID(self): return "0000"        
 
-    def __init__(self):
+    def __init__(self, total=999999):
         self.next_index_page = 0
         self.grep_urls = []
         self.next_url_idx = 0
         self.cnt = 0 # debug
+        self.total = total
 
     def __get_urls(self, idx):
         def get_article_url_infos(div):
@@ -54,7 +55,7 @@ class AppleDailyLoader(SiteLoader):
         self.grep_urls = get_article_url_infos(list_div)
 
     def next_url(self):
-        if self.cnt>5:
+        if self.cnt>self.total:
             return None
         self.cnt += 1
         if self.next_url_idx >= len(self.grep_urls):
