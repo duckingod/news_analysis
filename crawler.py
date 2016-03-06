@@ -76,13 +76,17 @@ class Crawler:
         self.max_threads = Crawler.MAX_THREAD
         self.loader = site_loader
     def __make_threads(self, article_mgr=None):
+        if article_mgr==None:
+            results = self.results 
+        else:
+            results = None
         for i in range(self.max_threads):
             self.threads.append(
                     Crawler.LoadArticleThread(
                         i,
                         self.loader,
                         self.urls,
-                        self.results,
+                        result_queue=results,
                         article_mgr=article_mgr
                     )
                 )
@@ -117,6 +121,7 @@ if __name__=="__main__":
 
     loader = AppleDailyLoader()
     crawler = Crawler(loader)
-    result = crawler.run( article_mgr=data_manage.ArticleManager() )
-    # data_manage.ArticleManager().update(loader, result)
+    crawler.run( article_mgr=data_manage.ArticleManager() ) # not use queue to save articles
+    # result = crawler.run() # use queue to save articles
+    # data_manage.ArticleManager().update(loader, result) # use queue to save articles
     

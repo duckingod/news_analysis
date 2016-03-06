@@ -70,12 +70,8 @@ if __name__=='__main__':
             ThresholdLogExtractor(2, 4))
     articles, vectors = generator.generate()
     
-    article_mgr.set_label(articles[0], ['Label0', 'Label11'])    
-    article_mgr.set_label(articles[3], ['Label5', '12312'])    
-    print '===='
-    print articles[2].title
-    print article_mgr.get_label(articles[2])
+    print articles[0].title
+    print article_mgr.get_label(articles[0])
     print vectors[0]
-    article_mgr.save_label_sheet()
 
 
