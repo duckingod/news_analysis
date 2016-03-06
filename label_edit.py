@@ -86,9 +86,15 @@ class ArticleViewer(object):
 
 class QuickLabelSetMaintainer(object):
     POSITION = [5, 50, 5, 6]
+    CACHE_PATH = "data/etc/quick-label-set"
     # height, width, off_x, off_y
     def __init__(self, stdscr):
-        self.label = ['']*10
+        import os
+        if os.path.isfile(self.CACHE_PATH):
+            with open(self.CACHE_PATH, 'r') as f:
+                self.label = eval(f.read().decode('utf-8'))
+        else:
+            self.label = ['']*10
         self.stdscr = stdscr
         self.show_str = ""
     def refresh(self, show_s=None):
@@ -110,12 +116,16 @@ class QuickLabelSetMaintainer(object):
         self.refresh("Press 0~9 for editing corresponding label")
 
         while_run(self)
+    def save(self):
+        with open(self.CACHE_PATH, 'w') as f:
+            f.write(str(self.label))
     def run(self, ch):
         for c in switch(ch):
             if c(ord('0'), ord('9')):
                 self.refresh("Input new Label for '"+chr(ch)+"'")
                 l = self.stdscr.getstr()
-                self.label[ch-ord('0')] = l
+                self.label[int(chr(ch))] = l
+                self.save()
             if c(ord('q')):
                 return False
         self.refresh("Press 0~9 for editing corresponding label")
