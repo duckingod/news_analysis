@@ -102,12 +102,13 @@ class ArticleManager:
         #             result.append(info)
         return result 
 
-    """
-    Get label and text content of article
-    param info: article info
-    return: (label, text)
-    """
     def get_content(self, info):
+        """Get label and text content of article.
+        Args:
+            info: article info
+        Returns:
+            (labels, text)
+        """
         path = self.__article_full_path(info)
         with open(path, 'r') as f:
             cont = f.read().decode('utf-8')

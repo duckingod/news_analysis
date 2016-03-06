@@ -4,7 +4,7 @@ from model.record_manage import EntryTagManager, LabelTagManager
 from model.common import PathGetter
 from model.data_manage import ArticleManager
 
-class DataMaker:
+class DataMaker(object):
     def __init__(self, feature_generator, feature_extractors):
         self.article_mgr = ArticleManager() 
         self.generator = feature_generator
@@ -25,7 +25,14 @@ class DataMaker:
             result.append([label, vector])
         return (articles, result)
 
-class VectorGenerator:
+class VectorGenerator(object):
+    """Raw data -> vector generator. 
+    Load raw data, convert into raw vector, apply multiple feature extraction method. 
+    Attributes:
+        name: configuration name.
+        label_tag: the label-tag-sheet after convert.
+        entry_tag: the entry-tag-sheet after convert.
+    """
     def __init__(self,
             config_name,
             article_mgr,
