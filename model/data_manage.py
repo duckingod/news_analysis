@@ -73,10 +73,13 @@ class ArticleManager:
             info, content = result
             update_single(info, content)
 
-
+    def get_recent_articles(self,
+            from_time=datetime.datetime.now()-timedelta(1),
+            to_time=datetime.datetime.now()+timedelta(1)):
+        return get_articles(self, from_time, to_time)
     def get_articles(
             self,
-            from_time=datetime.datetime.now()-timedelta(1),
+            from_time=datetime.datetime.min,
             to_time=datetime.datetime.now()+timedelta(1)):
         def daterange(st, end):
             for n in range(int( (end-st).days )):

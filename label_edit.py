@@ -25,11 +25,13 @@ class ArticleViewer(object):
     def __init__(self, article_mgr, stdscr):
         self.article_mgr = article_mgr
         self.stdscr = stdscr
+    def selected_article(self):
+        return self.article_list_viewer.selected_article()
     def clear_window(self):
         for i in range(self.WIN_HEIGHT):
             self.window.addstr(i, 0, ' '*self.WIN_WIDTH)
-    def show_label(self, label):
-        s = "  ".join([str(i)+":"+l for i, l in enumerate(label)])
+    def show_label(self, labels):
+        s = "  ".join([str(i)+":"+l for i, l in enumerate(labels)])
         self.window.addstr(1, 1, s)
     def show_content(self, s):
         w = self.WIN_WIDTH+-10
@@ -38,10 +40,10 @@ class ArticleViewer(object):
                 break
             self.window.addstr(self.LABEL_HEIGHT+i/w, 1, s[i:i+w].ljust(w))
     def update_article(self):
-        article = self.article_list_viewer.selected_article()
-        label, cont = self.article_mgr.get_content(article)
+        article = self.selected_article()
+        labels, cont = self.article_mgr.get_content(article)
         self.clear_window()
-        self.show_label(label)
+        self.show_label(labels)
         self.show_content(cont.encode(code))
         self.window.box()
         self.window.refresh()
@@ -60,13 +62,26 @@ class ArticleViewer(object):
         self.article_list_viewer.set_force_top(False)
         self.window = None
 
-    def run(self, c):
-        if c==ord('q') or c==ord(' '):
-            return False
+    def toggle_label(self, label):
+        article = self.selected_article()
+        labels = self.article_mgr.get_label(article)
+        if label in labels:
+            labels.remove(label)
         else:
-            b = self.article_list_viewer.run(c)
-            self.update_article()
-            return b 
+            labels.append(label)
+        self.article_mgr.set_label(article, labels)
+
+    def run(self, ch):
+        for case in switch(ch):
+            if case(ord('q')) or case(ord(' ')):
+                return False
+            if case(ord('0'), ord('9')):
+                self.toggle_label(self.article_list_viewer.label_set.get_label(int(chr(ch))))
+                self.update_article()
+            if case():
+                b = self.article_list_viewer.run(ch)
+                self.update_article()
+                return True
         return True
 
 class QuickLabelSetMaintainer(object):
@@ -80,17 +95,19 @@ class QuickLabelSetMaintainer(object):
         if show_s:
             self.show_str = show_s
         ss = [ self.show_str,
-              "  ".join([str(i  )+":"+l for i, l in enumerate(self.label[ : 5])]),
-              "  ".join([str(i+5)+":"+l for i, l in enumerate(self.label[5:10])]) ]
+              "  ".join([str(i+1)+":"+l for i, l in enumerate(self.label[1: 6])]),
+              "  ".join([str(i+6)+":"+l for i, l in enumerate(self.label[6:10]+[self.label[0]])]) ]
         for i, s in enumerate(ss):
             self.window.addstr(i+1, 1, s.ljust(self.POSITION[1]))
         self.window.box()
         self.window.refresh()
+    def get_label(self, idx):
+        return self.label[idx]
     def start(self, article_list_viewer):
         self.window = curses.newwin(self.POSITION[0], self.POSITION[1], self.POSITION[2], self.POSITION[3])
         self.height = article_list_viewer.height
         self.stdscr.refresh()
-        self.refresh()
+        self.refresh("Press 0~9 for editing corresponding label")
 
         while_run(self)
     def run(self, ch):
@@ -104,18 +121,13 @@ class QuickLabelSetMaintainer(object):
         self.refresh("Press 0~9 for editing corresponding label")
         return True
         
-        
-
-
-        
-        
-
 class ArticleListViewer(object):
     # >  001301 2016/02/16 21:34 Title================
     INFO_FORMAT = "{index} {year}/{month}/{day} {hour}:{minute} {title}"
     INFO_PREFIX = 4
     INFO_WIDTH = 75
     INDEX_LENGTH = 6
+    INFO_ROWS = 20
     SCREEN_WIDTH = 80
     SCREEN_HEIGHT = 22
     def __init__(self, article_mgr, article_viewer, label_set, stdscr):
@@ -127,8 +139,9 @@ class ArticleListViewer(object):
         self.stdscr = stdscr
         self.force_top = False
         self.label_set = label_set
+        self.show_str = ""
     def chk_range(self, position):
-        return position<0 or position>=self.height
+        return position<0 or position>=self.INFO_ROWS
     def chk_all_range(self, pos):
         return pos<0 or pos>=len(self.articles)
     def make_in_all_range(self, pos):
@@ -136,9 +149,11 @@ class ArticleListViewer(object):
     def cursor_pos(self):
         return self.now-self.top
     def max_top(self):
-        return len(self.articles)-self.height
+        return len(self.articles)-self.INFO_ROWS
     def selected_article(self):
         return self.articles[self.now]
+    def show_text(self, s):
+        self.window.addstr(self.INFO_ROWS, 2, s)
     def set_force_top(self, b):
         self.force_top = b
         if b:
@@ -183,9 +198,9 @@ class ArticleListViewer(object):
         elif direction=='down':
             self.cursor_move(offset= 1)
         elif direction=='pageup':
-            self.cursor_move(offset=-self.height)
+            self.cursor_move(offset=-self.INFO_ROWS)
         elif direction=='pagedown':
-            self.cursor_move(offset=self.height)
+            self.cursor_move(offset=self.INFO_ROWS)
         elif direction=="stay":
             self.cursor_move(offset=0)
 
@@ -193,16 +208,16 @@ class ArticleListViewer(object):
             move = self.cursor_pos()-2
         else:
             if self.now<self.top:
-                move = -min(self.height, self.top)
-            elif self.now>=self.top+self.height:
-                move = min(self.height, self.max_top()-self.top)
+                move = -min(self.INFO_ROWS, self.top)
+            elif self.now>=self.top+self.INFO_ROWS:
+                move = min(self.INFO_ROWS, self.max_top()-self.top)
             else:
                 move = 0
         if move!=0:
             self.top += move
             self.refresh()
     def refresh(self):
-        for i in range(self.height):
+        for i in range(self.INFO_ROWS):
             self.clear_prefix(i)
             self.show_article(self.top+i, i)
         self.draw_cursor()
@@ -224,9 +239,10 @@ class ArticleListViewer(object):
         self.window.addstr(0, 0, 'loading article info...')
         self.articles = self.article_mgr.get_articles()
         self.stdscr.refresh()
-        self.refresh()
         while_run(self)
     def run(self, ch):
+        self.show_text("use 'wasd'->move, space->edit, 'c'->change labels, 'v'->save")
+        self.window.refresh()
         for c in switch(ch):
             if c(ord('w')):
                 self.move('up')
@@ -240,16 +256,21 @@ class ArticleListViewer(object):
                 return False
             if c(ord(':')):
                 idx = self.stdscr.getstr()
-                self.goto(int(idx))
+                try:
+                    self.goto(int(idx))
+                except:
+                    pass
             if c(ord(' ')):
                 self.article_viewer.start(self)
                 self.refresh()
             if c(ord('c')):
                 self.label_set.start(self)
                 self.refresh()
+            if c(ord('v')):
+                self.article_mgr.save_label_sheet()
             if c():
                 return True
-        self.window.refresh()
+        self.refresh()
         self.input_cursor_clear()
         return True
     
