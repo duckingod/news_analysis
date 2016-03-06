@@ -4,7 +4,18 @@ import curses
 import locale
 locale.setlocale(locale.LC_ALL, '')
 code = locale.getpreferredencoding() 
-    
+ 
+from utils import switch
+
+"""
+self: run(self, c)
+      stdscr
+      height
+"""
+def while_run(self):
+    while self.run(self.stdscr.getch(self.height, 0)):
+        pass
+
 class ArticleViewer(object):
     WIN_Y_START = 3
     WIN_X_START = 10
@@ -36,18 +47,19 @@ class ArticleViewer(object):
         self.window.refresh()
     def start(self, article_list_viewer):
         self.article_list_viewer = article_list_viewer
+        self.height = self.article_list_viewer.height
         self.window = curses.newwin(self.WIN_HEIGHT, self.WIN_WIDTH+1, self.WIN_Y_START, self.WIN_X_START)
+        if self.window==None:
+            exit()
         self.stdscr.refresh()
-        self.article_list_viewer.force_top = True
-        self.article_list_viewer.move('stay')
-        self.article_list_viewer.refresh()
-        self.article_list_viewer.window.refresh()
+        self.article_list_viewer.set_force_top(True)
         self.update_article()
-        self.window.refresh()
-        while self.run(self.stdscr.getch(self.article_list_viewer.height, 0)):
-            pass
-        self.article_list_viewer.force_top = False
+
+        while_run(self)
+
+        self.article_list_viewer.set_force_top(False)
         self.window = None
+
     def run(self, c):
         if c==ord('q') or c==ord(' '):
             return False
@@ -57,6 +69,45 @@ class ArticleViewer(object):
             return b 
         return True
 
+class QuickLabelSetMaintainer(object):
+    POSITION = [5, 50, 5, 6]
+    # height, width, off_x, off_y
+    def __init__(self, stdscr):
+        self.label = ['']*10
+        self.stdscr = stdscr
+        self.show_str = ""
+    def refresh(self, show_s=None):
+        if show_s:
+            self.show_str = show_s
+        ss = [ self.show_str,
+              "  ".join([str(i  )+":"+l for i, l in enumerate(self.label[ : 5])]),
+              "  ".join([str(i+5)+":"+l for i, l in enumerate(self.label[5:10])]) ]
+        for i, s in enumerate(ss):
+            self.window.addstr(i+1, 1, s.ljust(self.POSITION[1]))
+        self.window.box()
+        self.window.refresh()
+    def start(self, article_list_viewer):
+        self.window = curses.newwin(self.POSITION[0], self.POSITION[1], self.POSITION[2], self.POSITION[3])
+        self.height = article_list_viewer.height
+        self.stdscr.refresh()
+        self.refresh()
+
+        while_run(self)
+    def run(self, ch):
+        for c in switch(ch):
+            if c(ord('0'), ord('9')):
+                self.refresh("Input new Label for '"+chr(ch)+"'")
+                l = self.stdscr.getstr()
+                self.label[ch-ord('0')] = l
+            if c(ord('q')):
+                return False
+        self.refresh("Press 0~9 for editing corresponding label")
+        return True
+        
+        
+
+
+        
         
 
 class ArticleListViewer(object):
@@ -67,7 +118,7 @@ class ArticleListViewer(object):
     INDEX_LENGTH = 6
     SCREEN_WIDTH = 80
     SCREEN_HEIGHT = 22
-    def __init__(self, article_mgr, article_viewer, stdscr):
+    def __init__(self, article_mgr, article_viewer, label_set, stdscr):
         self.top = 0
         self.now = 0
         self.height = self.SCREEN_HEIGHT
@@ -75,6 +126,7 @@ class ArticleListViewer(object):
         self.article_viewer = article_viewer
         self.stdscr = stdscr
         self.force_top = False
+        self.label_set = label_set
     def chk_range(self, position):
         return position<0 or position>=self.height
     def chk_all_range(self, pos):
@@ -87,6 +139,11 @@ class ArticleListViewer(object):
         return len(self.articles)-self.height
     def selected_article(self):
         return self.articles[self.now]
+    def set_force_top(self, b):
+        self.force_top = b
+        if b:
+            self.move('stay')
+            self.refresh()
     def show_article(self, index, position):
         if self.chk_range(position): return
         s = ''
@@ -159,7 +216,6 @@ class ArticleListViewer(object):
         if self.top<0:
             self.top = 0
         self.refresh()
-        
     def input_cursor_clear(self):
         self.window.addstr(self.height, 0, ' '*self.SCREEN_WIDTH)
         curses.setsyx(self.height, 0)
@@ -169,25 +225,30 @@ class ArticleListViewer(object):
         self.articles = self.article_mgr.get_articles()
         self.stdscr.refresh()
         self.refresh()
-        while self.run(self.stdscr.getch(self.height, 0)):
-            pass
-    def run(self, c):
-        if c==ord('w'):#curses.KEY_UP:
-            self.move('up')
-        elif c==ord('s'):#curses.KEY_DOWN:
-            self.move('down')
-        elif c==ord('a'):
-            self.move('pageup')
-        elif c==ord('d'):
-            self.move('pagedown')
-        elif c==ord('q'):
-            return False
-        elif c==ord(':'):
-            idx = self.stdscr.getstr()
-            self.goto(int(idx))
-        elif c==ord(' '):
-            self.article_viewer.start(self)
-            self.refresh()
+        while_run(self)
+    def run(self, ch):
+        for c in switch(ch):
+            if c(ord('w')):
+                self.move('up')
+            if c(ord('s')):
+                self.move('down')
+            if c(ord('a')):
+                self.move('pageup')
+            if c(ord('d')):
+                self.move('pagedown')
+            if c(ord('q')):
+                return False
+            if c(ord(':')):
+                idx = self.stdscr.getstr()
+                self.goto(int(idx))
+            if c(ord(' ')):
+                self.article_viewer.start(self)
+                self.refresh()
+            if c(ord('c')):
+                self.label_set.start(self)
+                self.refresh()
+            if c():
+                return True
         self.window.refresh()
         self.input_cursor_clear()
         return True
@@ -197,8 +258,9 @@ class LabelEditor(object):
     def __init__(self, article_mgr):
         self.article_mgr = article_mgr
         self.stdscr = curses.initscr()
+        self.label_set = QuickLabelSetMaintainer(self.stdscr)
         self.article_viewer = ArticleViewer(self.article_mgr, self.stdscr)
-        self.article_list_viewer = ArticleListViewer(self.article_mgr, self.article_viewer, self.stdscr) 
+        self.article_list_viewer = ArticleListViewer(self.article_mgr, self.article_viewer, self.label_set, self.stdscr) 
     def start(self):
         self.article_list_viewer.start()
         curses.endwin()

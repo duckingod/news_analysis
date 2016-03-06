@@ -62,16 +62,20 @@ if __name__=='__main__':
     from model.data_manage import ArticleManager
     from feature.generate import SimpleNGramGenerator
     from feature.extract import ThresholdLogExtractor
+    article_mgr = ArticleManager()
     generator = VectorGenerator(
             'ngram-thres_log-test',
-            ArticleManager(),
+            article_mgr,
             SimpleNGramGenerator(n=2),
             ThresholdLogExtractor(2, 4))
     articles, vectors = generator.generate()
-        
+    
+    article_mgr.set_label(articles[0], ['Label0', 'Label11'])    
+    article_mgr.set_label(articles[3], ['Label5', '12312'])    
     print '===='
     print articles[2].title
-    print ArticleManager().get_label(articles[2])
+    print article_mgr.get_label(articles[2])
     print vectors[0]
+    article_mgr.save_label_sheet()
 
 
